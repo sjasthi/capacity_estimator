@@ -1,0 +1,32 @@
+Scaled Agile Framework
+--> ART (Agile Release Train)
+--> ART Roles (Release Train Engineer - RTE)
+--> Scrum / Agile Team
+--> Scrum Master
+--> Product Owner
+--> Developers
+
+
+2. Iterations (2 week iterations)
+3. Program Increments (5 or 6 or 6.5 iterations)
+
+
+4. Any organization will have some data 
+-- ART --> has "Agile Teams" --> have "SM, PO + Developers".
+
+5. What is the capacity of ART 1?
+What is the capacity of ART 2?
+What is the capacity of Agile Team x in ART 3?
+What is the total capacity for the organization?
+How is the capacity trending?
+
+6. We must answer all questions related to the capacity.
+-- how do they create the capacity numbers?
+-- how is the user interface going to look like?
+-- where do we persist the capacity numbers?
+
+
+7. Data Sources
+-- iteration schedule (dates)
+-- ART, Team, Team Member composition
+
