@@ -27,6 +27,36 @@ How is the capacity trending?
 
 
 7. Data Sources
--- iteration schedule (dates)
--- ART, Team, Team Member composition
+Note: 8 hours = 1 story point = we should measure the capacity in story points.
+-- iteration schedule (dates)  (Program Increment | Iteration | Iteration Start Date | Iteration End Date | Comments)
+-- ART, Team, Team Member composition   (ART Name | Scrum Team Name | Team Member Name | Team Member Email | Role)
+-- capacities ( ART Name | Team Name | Program Increment | Iteration | capacity)
+
+8. Reports
+- show the capacity trend for the entire Orgnization or ART or Team or a person
+
+
+=================== DESIGN =======================================
+
+1. Have at least 500 employees
+2. Have 10 ARTs
+3. Assume that each ART has 3 to 6 Scrum Teams
+4. Assumethat each Scrum Team has 8 to 12 Team members
+
+===================================================================
+
+HTML UI --> PHP --> Database  (phase 1)
+HTML UI --> PHP --> API (python) --> Database (phase 2)
+
+In phase 2: you use the APIs to get the data from your sources (iteration schedule and ART composition).
+
+=========================================================================
+
+FP 2: How is the user interface going to look like?
+
+FP 3:  Database tables with dummy data populated; Initial  UI / web pages
+
+
+
+
 
