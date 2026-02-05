@@ -57,8 +57,7 @@ FP 2: How is the user interface going to look like?
 FP 3:  Database tables with dummy data populated; Initial  UI / web pages
 
 
-
-
+FP 2: How is the user interface going to look like? :
 
 ┌─────────────────────────────────────────────────────┐
 │  Organization Capacity Dashboard                    │
