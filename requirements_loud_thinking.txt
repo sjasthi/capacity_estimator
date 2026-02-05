@@ -98,3 +98,24 @@ FP 2: How is the user interface going to look like? :
 │                                                      │
 └─────────────────────────────────────────────────────┘
 
+
+=================
+
+1.   ART ---------------^  (select one of the ARTs from the pulldown list)
+     Team --------------^ (Based on the ART selection, show the Teams that belong to that ART; And users select a Team)
+
+Once the users select ART and Team, your web page should populate the names of the team members, their roles, Time Off column (default = 0), Default Load (100% or 50%), Capacity
+All the values must be populated.
+
+And users can change - Time Off column, as well as Default Load.
+Once those columns are changed, the capacity will be recalculated.
+
+Once they agree with the number, they will say "Submit" and the capacity number will go into the database.
+
+2. Capacity is already pushed into the database.
+However, another employee came back and said they will be gone for vacation for 5 days.
+THey need to start over with the Step 1
+
+===================================
+
+
