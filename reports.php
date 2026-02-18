@@ -1,3 +1,9 @@
+<?php
+require 'db.php';
+$db = db();
+
+$results = $db->query("SELECT i.iterationName, SUM(c.storyPoints) as capacity FROM iterations i LEFT JOIN capacities c ON i.iterationId=c.iterationId GROUP BY i.iterationId ORDER BY i.startDate DESC LIMIT 6");
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,15 +18,15 @@
             <h2>📊 Capacity</h2>
         </div>
         <nav>
-            <a href="index.html" class="nav-item">
+            <a href="index.php" class="nav-item">
                 <span>🏠</span>
                 <span>Dashboard</span>
             </a>
-            <a href="reports.html" class="nav-item active">
+            <a href="reports.php" class="nav-item active">
                 <span>📈</span>
                 <span>Reports</span>
             </a>
-            <a href="import.html" class="nav-item">
+            <a href="import.php" class="nav-item">
                 <span>📤</span>
                 <span>Import</span>
             </a>
@@ -79,36 +85,20 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <?php 
+                    $prev = null;
+                    while($row = $results->fetch_assoc()): 
+                        $change = $prev ? $row['capacity'] - $prev : 0;
+                        $changeClass = $change > 0 ? 'positive' : ($change < 0 ? 'negative' : 'neutral');
+                        $changeText = $change > 0 ? '+'.number_format($change, 0) : ($change < 0 ? number_format($change, 0) : '—');
+                        $prev = $row['capacity'];
+                    ?>
                     <tr>
-                        <td>Iteration 1</td>
-                        <td><span class="badge">1,800 SP</span></td>
-                        <td><span class="neutral">—</span></td>
+                        <td><?= htmlspecialchars($row['iterationName']) ?></td>
+                        <td><span class="badge"><?= number_format($row['capacity'], 0) ?> SP</span></td>
+                        <td><span class="<?= $changeClass ?>"><?= $changeText ?></span></td>
                     </tr>
-                    <tr>
-                        <td>Iteration 2</td>
-                        <td><span class="badge">1,820 SP</span></td>
-                        <td><span class="positive">+20</span></td>
-                    </tr>
-                    <tr>
-                        <td>Iteration 3</td>
-                        <td><span class="badge">1,850 SP</span></td>
-                        <td><span class="positive">+30</span></td>
-                    </tr>
-                    <tr>
-                        <td>Iteration 4</td>
-                        <td><span class="badge">1,840 SP</span></td>
-                        <td><span class="negative">-10</span></td>
-                    </tr>
-                    <tr>
-                        <td>Iteration 5</td>
-                        <td><span class="badge">1,860 SP</span></td>
-                        <td><span class="positive">+20</span></td>
-                    </tr>
-                    <tr>
-                        <td>Iteration 6</td>
-                        <td><span class="badge">1,850 SP</span></td>
-                        <td><span class="negative">-10</span></td>
-                    </tr>
+                    <?php endwhile; ?>
                 </tbody>
             </table>
         </div>
