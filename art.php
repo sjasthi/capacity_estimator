@@ -1,3 +1,5 @@
+hi
+
 <?php
 require 'db.php';
 $db = db();
