@@ -1,4 +1,3 @@
-//dasd
 <?php
 require 'db.php';
 $db = db();
@@ -6,9 +5,29 @@ $artId = intval($_GET['id']);
 
 $art = $db->query("SELECT artName FROM arts WHERE artId=$artId")->fetch_assoc();
 $iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
-$capacity = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN teams t ON c.teamId=t.teamId JOIN iterations i ON c.iterationId=i.iterationId WHERE t.artId=$artId AND i.iterationName='$iter'")->fetch_assoc()['total'] ?? 0;
-$teams = $db->query("SELECT t.teamId, t.teamName, COUNT(tm.teamMemberId) as members, COALESCE(SUM(c.storyPoints), 0) as capacity FROM teams t LEFT JOIN team_members tm ON t.teamId=tm.teamId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId AND i.iterationName='$iter' WHERE t.artId=$artId GROUP BY t.teamId");
-$teamCount = $teams->num_rows;
+$iterEscaped = $db->real_escape_string($iter);
+
+$capacity = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN teams t ON c.teamId=t.teamId JOIN iterations i ON c.iterationId=i.iterationId WHERE t.artId=$artId AND i.iterationName='$iterEscaped'")->fetch_assoc()['total'] ?? 0;
+
+$teamsResult = $db->query("
+    SELECT t.teamId, t.teamName, 
+           COUNT(tm.teamMemberId) as members, 
+           COALESCE(SUM(c.storyPoints), 0) as capacity 
+    FROM teams t 
+    LEFT JOIN team_members tm ON t.teamId = tm.teamId 
+    LEFT JOIN capacities c ON t.teamId = c.teamId 
+    LEFT JOIN iterations i ON c.iterationId = i.iterationId 
+        AND i.iterationName = '$iterEscaped'
+    WHERE t.artId = $artId 
+    GROUP BY t.teamId, t.teamName
+");
+
+// Fetch into array to avoid result set conflicts
+$teams = [];
+while ($row = $teamsResult->fetch_assoc()) {
+    $teams[] = $row;
+}
+$teamCount = count($teams);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,7 +72,7 @@ $teamCount = $teams->num_rows;
                 <div class="card-icon">🔄</div>
                 <div>
                     <div class="card-label">Iteration</div>
-                    <div class="card-value"><?= $iter ?></div>
+                    <div class="card-value"><?= htmlspecialchars($iter) ?></div>
                 </div>
             </div>
             <div class="card blue">
@@ -75,9 +94,9 @@ $teamCount = $teams->num_rows;
         <div class="content">
             <div class="content-header">
                 <h2>Teams</h2>
-                <input type="text" placeholder="Search..." class="search">
+                <input type="text" placeholder="Search..." class="search" id="teamSearch">
             </div>
-            <table>
+            <table id="teamsTable">
                 <thead>
                     <tr>
                         <th>Team</th>
@@ -87,10 +106,12 @@ $teamCount = $teams->num_rows;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php 
-                    $db->data_seek(0); 
-                    while($team = $teams->fetch_assoc()): 
-                    ?>
+                    <?php if (empty($teams)): ?>
+                    <tr>
+                        <td colspan="4" style="text-align:center; color:#888; padding:24px;">No teams found for this ART.</td>
+                    </tr>
+                    <?php else: ?>
+                    <?php foreach ($teams as $team): ?>
                     <tr>
                         <td>
                             <div class="name">
@@ -102,10 +123,20 @@ $teamCount = $teams->num_rows;
                         <td><span class="badge"><?= number_format($team['capacity'], 0) ?> SP</span></td>
                         <td><a href="team.php?id=<?= $team['teamId'] ?>" class="link">View →</a></td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <script>
+        document.getElementById('teamSearch').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            document.querySelectorAll('#teamsTable tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>

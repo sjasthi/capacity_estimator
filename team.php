@@ -5,15 +5,21 @@ $teamId = intval($_GET['id']);
 
 $team = $db->query("SELECT t.teamName, a.artId, a.artName FROM teams t JOIN arts a ON t.artId=a.artId WHERE t.teamId=$teamId")->fetch_assoc();
 $iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
-$capacity = $db->query("SELECT storyPoints FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE c.teamId=$teamId AND i.iterationName='$iter'")->fetch_assoc()['storyPoints'] ?? 0;
-$members = $db->query("SELECT p.name, p.email, tm.role, tm.allocationPct FROM team_members tm JOIN persons p ON tm.personId=p.personId WHERE tm.teamId=$teamId ORDER BY CASE tm.role WHEN 'Scrum Master' THEN 1 WHEN 'Product Owner' THEN 2 ELSE 3 END");
+$iterEscaped = $db->real_escape_string($iter);
+$capacity = $db->query("SELECT storyPoints FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE c.teamId=$teamId AND i.iterationName='$iterEscaped'")->fetch_assoc()['storyPoints'] ?? 0;
 
+// Fetch all members into array first to avoid result conflicts
+$membersResult = $db->query("SELECT p.name, p.email, tm.role, tm.allocationPct FROM team_members tm JOIN persons p ON tm.personId=p.personId WHERE tm.teamId=$teamId ORDER BY CASE tm.role WHEN 'Scrum Master' THEN 1 WHEN 'Product Owner' THEN 2 ELSE 3 END");
+$members = [];
+while ($row = $membersResult->fetch_assoc()) {
+    $members[] = $row;
+}
+
+// Calculate from the already-fetched members array
 $calc = 0;
-$memberCount = 0;
-$m = $db->query("SELECT allocationPct FROM team_members WHERE teamId=$teamId");
-while($r = $m->fetch_assoc()) {
-    $calc += 3.75 * ($r['allocationPct'] / 100);
-    $memberCount++;
+$memberCount = count($members);
+foreach ($members as $m) {
+    $calc += 3.75 * ($m['allocationPct'] / 100);
 }
 ?>
 <!DOCTYPE html>
@@ -59,7 +65,7 @@ while($r = $m->fetch_assoc()) {
                 <div class="card-icon">🔄</div>
                 <div>
                     <div class="card-label">Iteration</div>
-                    <div class="card-value"><?= $iter ?></div>
+                    <div class="card-value"><?= htmlspecialchars($iter) ?></div>
                 </div>
             </div>
             <div class="card blue">
@@ -88,9 +94,9 @@ while($r = $m->fetch_assoc()) {
         <div class="content">
             <div class="content-header">
                 <h2>Team Members</h2>
-                <input type="text" placeholder="Search..." class="search">
+                <input type="text" placeholder="Search..." class="search" id="memberSearch">
             </div>
-            <table>
+            <table id="membersTable">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -100,7 +106,12 @@ while($r = $m->fetch_assoc()) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while($member = $members->fetch_assoc()): 
+                    <?php if (empty($members)): ?>
+                    <tr>
+                        <td colspan="4" style="text-align:center; color:#888; padding:24px;">No members found for this team.</td>
+                    </tr>
+                    <?php else: ?>
+                    <?php foreach ($members as $member):
                         $names = explode(' ', $member['name']);
                         $initials = strtoupper(substr($names[0], 0, 1) . (isset($names[1]) ? substr($names[1], 0, 1) : ''));
                         $roleClass = $member['role'] == 'Scrum Master' ? 'sm' : ($member['role'] == 'Product Owner' ? 'po' : 'dev');
@@ -116,10 +127,20 @@ while($r = $m->fetch_assoc()) {
                         <td><span class="role <?= $roleClass ?>"><?= htmlspecialchars($member['role']) ?></span></td>
                         <td><?= $member['allocationPct'] ?>%</td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <script>
+        document.getElementById('memberSearch').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            document.querySelectorAll('#membersTable tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>

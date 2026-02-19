@@ -5,8 +5,26 @@ $db = db();
 
 $pi = $db->query("SELECT piName FROM program_increments ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['piName'] ?? 'N/A';
 $iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
-$total = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE i.iterationName='$iter'")->fetch_assoc()['total'] ?? 0;
-$arts = $db->query("SELECT a.artId, a.artName, COUNT(DISTINCT t.teamId) as teams, COALESCE(SUM(c.storyPoints), 0) as capacity FROM arts a LEFT JOIN teams t ON a.artId=t.artId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId WHERE i.iterationName='$iter' GROUP BY a.artId");
+$iterEscaped = $db->real_escape_string($iter);
+
+$total = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE i.iterationName='$iterEscaped'")->fetch_assoc()['total'] ?? 0;
+
+$artsResult = $db->query("
+    SELECT a.artId, a.artName, 
+           COUNT(DISTINCT t.teamId) as teams, 
+           COALESCE(SUM(c.storyPoints), 0) as capacity 
+    FROM arts a 
+    LEFT JOIN teams t ON a.artId = t.artId 
+    LEFT JOIN capacities c ON t.teamId = c.teamId 
+    LEFT JOIN iterations i ON c.iterationId = i.iterationId 
+        AND i.iterationName = '$iterEscaped'
+    GROUP BY a.artId, a.artName
+");
+
+$arts = [];
+while ($row = $artsResult->fetch_assoc()) {
+    $arts[] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -48,14 +66,14 @@ $arts = $db->query("SELECT a.artId, a.artName, COUNT(DISTINCT t.teamId) as teams
                 <div class="card-icon">📅</div>
                 <div>
                     <div class="card-label">Current PI</div>
-                    <div class="card-value"><?= $pi ?></div>
+                    <div class="card-value"><?= htmlspecialchars($pi) ?></div>
                 </div>
             </div>
             <div class="card blue">
                 <div class="card-icon">🔄</div>
                 <div>
                     <div class="card-label">Iteration</div>
-                    <div class="card-value"><?= $iter ?></div>
+                    <div class="card-value"><?= htmlspecialchars($iter) ?></div>
                 </div>
             </div>
             <div class="card green">
@@ -69,7 +87,7 @@ $arts = $db->query("SELECT a.artId, a.artName, COUNT(DISTINCT t.teamId) as teams
                 <div class="card-icon">🎯</div>
                 <div>
                     <div class="card-label">ARTs</div>
-                    <div class="card-value"><?= $arts->num_rows ?></div>
+                    <div class="card-value"><?= count($arts) ?></div>
                 </div>
             </div>
         </div>
@@ -77,9 +95,9 @@ $arts = $db->query("SELECT a.artId, a.artName, COUNT(DISTINCT t.teamId) as teams
         <div class="content">
             <div class="content-header">
                 <h2>Agile Release Trains</h2>
-                <input type="text" placeholder="Search..." class="search">
+                <input type="text" placeholder="Search..." class="search" id="artSearch">
             </div>
-            <table>
+            <table id="artsTable">
                 <thead>
                     <tr>
                         <th>ART</th>
@@ -90,7 +108,12 @@ $arts = $db->query("SELECT a.artId, a.artName, COUNT(DISTINCT t.teamId) as teams
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while($art = $arts->fetch_assoc()): ?>
+                    <?php if (empty($arts)): ?>
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:#888; padding:24px;">No ARTs found. Import data to get started.</td>
+                    </tr>
+                    <?php else: ?>
+                    <?php foreach ($arts as $art): ?>
                     <tr>
                         <td>
                             <div class="name">
@@ -103,10 +126,20 @@ $arts = $db->query("SELECT a.artId, a.artName, COUNT(DISTINCT t.teamId) as teams
                         <td><span class="status">Active</span></td>
                         <td><a href="art.php?id=<?= $art['artId'] ?>" class="link">View →</a></td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <script>
+        document.getElementById('artSearch').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            document.querySelectorAll('#artsTable tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>
