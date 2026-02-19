@@ -1,3 +1,4 @@
+//test
 <?php
 require 'db.php';
 $db = db();
