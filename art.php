@@ -6,75 +6,83 @@ $artId = intval($_GET['id']);
 $art = $db->query("SELECT artName FROM arts WHERE artId=$artId")->fetch_assoc();
 $iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
 $capacity = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN teams t ON c.teamId=t.teamId JOIN iterations i ON c.iterationId=i.iterationId WHERE t.artId=$artId AND i.iterationName='$iter'")->fetch_assoc()['total'] ?? 0;
-$teams = $db->query("SELECT t.teamId, t.teamName, COUNT(tm.teamMemberId) as members, COALESCE(SUM(c.storyPoints), 0) as capacity FROM teams t LEFT JOIN team_members tm ON t.teamId=tm.teamId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId AND i.iterationName='$iter' WHERE t.artId=$artId GROUP BY t.teamId");
+$teams = $db->query("SELECT t.teamId, t.teamName, COUNT(tm.teamMemberId) as members, COALESCE(c.storyPoints, 0) as capacity FROM teams t LEFT JOIN team_members tm ON t.teamId=tm.teamId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId AND i.iterationName='$iter' WHERE t.artId=$artId GROUP BY t.teamId, t.teamName");
 $teamCount = $teams->num_rows;
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($art['artName']) ?></title>
+    <title><?= htmlspecialchars($art['artName']) ?> - CapacityHub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <h2>📊 Capacity</h2>
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            CapacityHub
         </div>
-        <nav>
-            <a href="index.php" class="nav-item">
-                <span>🏠</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="reports.php" class="nav-item">
-                <span>📈</span>
-                <span>Reports</span>
-            </a>
-            <a href="import.php" class="nav-item">
-                <span>📤</span>
-                <span>Import</span>
-            </a>
-        </nav>
+        <div class="nav-tabs">
+            <a href="index.php" class="nav-tab">Dashboard</a>
+            <a href="reports.php" class="nav-tab">Reports</a>
+            <a href="import.php" class="nav-tab">Import</a>
+        </div>
+        <div class="user-menu">
+            <div class="notification-icon">
+                <i class="far fa-bell"></i>
+            </div>
+            <div class="user-avatar">AD</div>
+        </div>
     </div>
 
-    <div class="main">
-        <div class="header">
-            <div>
-                <a href="index.php" class="back">← Dashboard</a>
-                <h1><?= htmlspecialchars($art['artName']) ?></h1>
-            </div>
-            <div class="user">Admin</div>
+    <div class="container">
+        <a href="index.php" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+
+        <div class="page-header">
+            <h1 class="page-title"><?= htmlspecialchars($art['artName']) ?></h1>
+            <p class="page-subtitle">Release Train Overview</p>
         </div>
 
-        <div class="cards">
-            <div class="card purple">
-                <div class="card-icon">🔄</div>
-                <div>
-                    <div class="card-label">Iteration</div>
-                    <div class="card-value"><?= $iter ?></div>
+        <div class="metrics-row">
+            <div class="metric-box purple">
+                <div class="metric-header">
+                    <div class="metric-label">CURRENT ITERATION</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= htmlspecialchars($iter) ?></div>
             </div>
-            <div class="card blue">
-                <div class="card-icon">👥</div>
-                <div>
-                    <div class="card-label">Teams</div>
-                    <div class="card-value"><?= $teamCount ?></div>
+            <div class="metric-box blue">
+                <div class="metric-header">
+                    <div class="metric-label">TOTAL TEAMS</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= $teamCount ?></div>
             </div>
-            <div class="card green">
-                <div class="card-icon">⚡</div>
-                <div>
-                    <div class="card-label">Capacity</div>
-                    <div class="card-value"><?= number_format($capacity, 0) ?> SP</div>
+            <div class="metric-box green">
+                <div class="metric-header">
+                    <div class="metric-label">ART CAPACITY</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= number_format($capacity, 0) ?> SP</div>
             </div>
         </div>
 
-        <div class="content">
-            <div class="content-header">
-                <h2>Teams</h2>
-                <input type="text" placeholder="Search..." class="search">
+        <div class="data-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Teams</h2>
+                <input type="text" class="search-input" placeholder="Search teams...">
             </div>
             <table>
                 <thead>
@@ -86,20 +94,27 @@ $teamCount = $teams->num_rows;
                     </tr>
                 </thead>
                 <tbody>
-                    <?php 
-                    $db->data_seek(0); 
-                    while($team = $teams->fetch_assoc()): 
-                    ?>
+                    <?php while($team = $teams->fetch_assoc()): ?>
                     <tr>
                         <td>
-                            <div class="name">
-                                <span class="emoji">🎯</span>
-                                <?= htmlspecialchars($team['teamName']) ?>
+                            <div class="team-info">
+                                <div class="team-logo">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="team-details">
+                                    <h4><?= htmlspecialchars($team['teamName']) ?></h4>
+                                    <p>Scrum Team</p>
+                                </div>
                             </div>
                         </td>
-                        <td><?= $team['members'] ?></td>
-                        <td><span class="badge"><?= number_format($team['capacity'], 0) ?> SP</span></td>
-                        <td><a href="team.php?id=<?= $team['teamId'] ?>" class="link">View →</a></td>
+                        <td><?= $team['members'] ?> members</td>
+                        <td><span class="capacity-pill"><?= number_format($team['capacity'], 0) ?> SP</span></td>
+                        <td>
+                            <a href="team.php?id=<?= $team['teamId'] ?>" class="view-link">
+                                View details
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </td>
                     </tr>
                     <?php endwhile; ?>
                 </tbody>

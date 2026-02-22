@@ -17,78 +17,88 @@ while($r = $m->fetch_assoc()) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($team['teamName']) ?></title>
+    <title><?= htmlspecialchars($team['teamName']) ?> - CapacityHub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <h2>📊 Capacity</h2>
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            CapacityHub
         </div>
-        <nav>
-            <a href="index.php" class="nav-item">
-                <span>🏠</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="reports.php" class="nav-item">
-                <span>📈</span>
-                <span>Reports</span>
-            </a>
-            <a href="import.php" class="nav-item">
-                <span>📤</span>
-                <span>Import</span>
-            </a>
-        </nav>
+        <div class="nav-tabs">
+            <a href="index.php" class="nav-tab">Dashboard</a>
+            <a href="reports.php" class="nav-tab">Reports</a>
+            <a href="import.php" class="nav-tab">Import</a>
+        </div>
+        <div class="user-menu">
+            <div class="notification-icon">
+                <i class="far fa-bell"></i>
+            </div>
+            <div class="user-avatar">AD</div>
+        </div>
     </div>
 
-    <div class="main">
-        <div class="header">
-            <div>
-                <a href="art.php?id=<?= $team['artId'] ?>" class="back">← <?= htmlspecialchars($team['artName']) ?></a>
-                <h1><?= htmlspecialchars($team['teamName']) ?></h1>
-            </div>
-            <div class="user">Admin</div>
+    <div class="container">
+        <a href="art.php?id=<?= $team['artId'] ?>" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to <?= htmlspecialchars($team['artName']) ?>
+        </a>
+
+        <div class="page-header">
+            <h1 class="page-title"><?= htmlspecialchars($team['teamName']) ?></h1>
+            <p class="page-subtitle">Team Overview</p>
         </div>
 
-        <div class="cards">
-            <div class="card purple">
-                <div class="card-icon">🔄</div>
-                <div>
-                    <div class="card-label">Iteration</div>
-                    <div class="card-value"><?= $iter ?></div>
+        <div class="metrics-row">
+            <div class="metric-box purple">
+                <div class="metric-header">
+                    <div class="metric-label">CURRENT ITERATION</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= htmlspecialchars($iter) ?></div>
             </div>
-            <div class="card blue">
-                <div class="card-icon">👥</div>
-                <div>
-                    <div class="card-label">Members</div>
-                    <div class="card-value"><?= $memberCount ?></div>
+            <div class="metric-box blue">
+                <div class="metric-header">
+                    <div class="metric-label">TEAM MEMBERS</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= $memberCount ?></div>
             </div>
-            <div class="card green">
-                <div class="card-icon">⚡</div>
-                <div>
-                    <div class="card-label">Capacity</div>
-                    <div class="card-value"><?= number_format($capacity, 0) ?> SP</div>
+            <div class="metric-box green">
+                <div class="metric-header">
+                    <div class="metric-label">CAPACITY</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= number_format($capacity, 0) ?> SP</div>
             </div>
-            <div class="card orange">
-                <div class="card-icon">🎯</div>
-                <div>
-                    <div class="card-label">Calculated</div>
-                    <div class="card-value"><?= number_format($calc, 2) ?> SP</div>
+            <div class="metric-box orange">
+                <div class="metric-header">
+                    <div class="metric-label">CALCULATED</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= number_format($calc, 2) ?> SP</div>
             </div>
         </div>
 
-        <div class="content">
-            <div class="content-header">
-                <h2>Team Members</h2>
-                <input type="text" placeholder="Search..." class="search">
+        <div class="data-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Team Members</h2>
+                <input type="text" class="search-input" placeholder="Search members...">
             </div>
             <table>
                 <thead>
@@ -107,13 +117,15 @@ while($r = $m->fetch_assoc()) {
                     ?>
                     <tr>
                         <td>
-                            <div class="name">
+                            <div class="team-info">
                                 <div class="avatar"><?= $initials ?></div>
-                                <?= htmlspecialchars($member['name']) ?>
+                                <div class="team-details">
+                                    <h4><?= htmlspecialchars($member['name']) ?></h4>
+                                </div>
                             </div>
                         </td>
                         <td><?= htmlspecialchars($member['email']) ?></td>
-                        <td><span class="role <?= $roleClass ?>"><?= htmlspecialchars($member['role']) ?></span></td>
+                        <td><span class="role-badge <?= $roleClass ?>"><?= htmlspecialchars($member['role']) ?></span></td>
                         <td><?= $member['allocationPct'] ?>%</td>
                     </tr>
                     <?php endwhile; ?>

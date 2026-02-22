@@ -16,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             try {
                 if ($type == 'iterations') {
-                    // Get or create ART
                     $stmt = $db->prepare("SELECT artId FROM arts WHERE artName=?");
                     $stmt->bind_param("s", $row['ART Name']);
                     $stmt->execute();
@@ -30,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $artId = $db->insert_id;
                     }
                     
-                    // Get or create PI
                     $stmt = $db->prepare("SELECT piId FROM program_increments WHERE piName=? AND artId=?");
                     $stmt->bind_param("si", $row['Program Increment'], $artId);
                     $stmt->execute();
@@ -44,14 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $piId = $db->insert_id;
                     }
                     
-                    // Insert iteration
                     $stmt = $db->prepare("INSERT INTO iterations (iterationName, piId, startDate, endDate) VALUES (?,?,?,?)");
                     $stmt->bind_param("siss", $row['Iteration'], $piId, $row['Iteration Start Date'], $row['Iteration End Date']);
                     $stmt->execute();
                     $count++;
                     
                 } elseif ($type == 'composition') {
-                    // Get or create ART
                     $stmt = $db->prepare("SELECT artId FROM arts WHERE artName=?");
                     $stmt->bind_param("s", $row['ART Name']);
                     $stmt->execute();
@@ -65,7 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $artId = $db->insert_id;
                     }
                     
-                    // Get or create Team
                     $stmt = $db->prepare("SELECT teamId FROM teams WHERE teamName=? AND artId=?");
                     $stmt->bind_param("si", $row['Scrum Team Name'], $artId);
                     $stmt->execute();
@@ -79,7 +74,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $teamId = $db->insert_id;
                     }
                     
-                    // Get or create Person
                     $stmt = $db->prepare("SELECT personId FROM persons WHERE email=?");
                     $stmt->bind_param("s", $row['Team Member Email']);
                     $stmt->execute();
@@ -93,17 +87,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $personId = $db->insert_id;
                     }
                     
-                    // Allocation
                     $alloc = $row['Role'] == 'Developer' ? 100 : ($row['Role'] == 'Product Owner' ? 60 : 50);
                     
-                    // Insert team member
                     $stmt = $db->prepare("INSERT INTO team_members (teamId, personId, role, allocationPct) VALUES (?,?,?,?)");
                     $stmt->bind_param("iisi", $teamId, $personId, $row['Role'], $alloc);
                     $stmt->execute();
                     $count++;
                     
                 } elseif ($type == 'capacity') {
-                    // Get team ID
                     $stmt = $db->prepare("SELECT t.teamId FROM teams t JOIN arts a ON t.artId=a.artId WHERE a.artName=? AND t.teamName=?");
                     $stmt->bind_param("ss", $row['ART Name'], $row['Team Name']);
                     $stmt->execute();
@@ -111,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     if ($result->num_rows == 0) continue;
                     $teamId = $result->fetch_assoc()['teamId'];
                     
-                    // Get iteration ID
                     $stmt = $db->prepare("SELECT i.iterationId FROM iterations i JOIN program_increments pi ON i.piId=pi.piId JOIN arts a ON pi.artId=a.artId WHERE a.artName=? AND pi.piName=? AND i.iterationName=?");
                     $stmt->bind_param("sss", $row['ART Name'], $row['Program Increment'], $row['Iteration']);
                     $stmt->execute();
@@ -119,18 +109,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     if ($result->num_rows == 0) continue;
                     $iterationId = $result->fetch_assoc()['iterationId'];
                     
-                    // Insert capacity
                     $stmt = $db->prepare("INSERT INTO capacities (teamId, iterationId, storyPoints) VALUES (?,?,?)");
                     $stmt->bind_param("iid", $teamId, $iterationId, $row['capacity']);
                     $stmt->execute();
                     $count++;
                 }
-            } catch (Exception $e) {
-                // Skip errors
-            }
+            } catch (Exception $e) {}
         }
         fclose($handle);
-        $message = "✓ Imported $count rows";
+        $message = "✓ Successfully imported $count rows";
     }
 }
 ?>
@@ -138,58 +125,80 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Import</title>
+    <title>Import Data - CapacityHub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo"><h2>📊 Capacity</h2></div>
-        <nav>
-            <a href="index.php" class="nav-item"><span>🏠</span><span>Dashboard</span></a>
-            <a href="reports.php" class="nav-item"><span>📈</span><span>Reports</span></a>
-            <a href="import.php" class="nav-item active"><span>📤</span><span>Import</span></a>
-        </nav>
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            CapacityHub
+        </div>
+        <div class="nav-tabs">
+            <a href="index.php" class="nav-tab">Dashboard</a>
+            <a href="reports.php" class="nav-tab">Reports</a>
+            <a href="import.php" class="nav-tab active">Import</a>
+        </div>
+        <div class="user-menu">
+            <div class="notification-icon">
+                <i class="far fa-bell"></i>
+            </div>
+            <div class="user-avatar">AD</div>
+        </div>
     </div>
 
-    <div class="main">
-        <div class="header">
-            <h1>Import Data</h1>
-            <div class="user">Admin</div>
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Import Data</h1>
+            <p class="page-subtitle">Upload CSV files to populate capacity data</p>
         </div>
 
         <?php if ($message): ?>
-        <div class="content">
-            <div style="padding:12px; background:#d1fae5; color:#065f46; border-radius:8px;">
-                <?= htmlspecialchars($message) ?>
-            </div>
+        <div class="success-message">
+            <?= htmlspecialchars($message) ?>
         </div>
         <?php endif; ?>
 
-        <div class="content">
-            <h2>Iteration Schedule</h2>
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".csv" class="file-input" required>
-                <input type="hidden" name="type" value="iterations">
-                <button type="submit" class="btn">Upload</button>
-            </form>
+        <div class="data-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Iteration Schedule</h2>
+            </div>
+            <div style="padding: 24px 28px;">
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="file" accept=".csv" class="file-input" required>
+                    <input type="hidden" name="type" value="iterations">
+                    <button type="submit" class="btn">Upload Iterations</button>
+                </form>
+            </div>
         </div>
 
-        <div class="content">
-            <h2>Team Composition</h2>
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".csv" class="file-input" required>
-                <input type="hidden" name="type" value="composition">
-                <button type="submit" class="btn">Upload</button>
-            </form>
+        <div class="data-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Team Composition</h2>
+            </div>
+            <div style="padding: 24px 28px;">
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="file" accept=".csv" class="file-input" required>
+                    <input type="hidden" name="type" value="composition">
+                    <button type="submit" class="btn">Upload Team Composition</button>
+                </form>
+            </div>
         </div>
 
-        <div class="content">
-            <h2>Capacity Data</h2>
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".csv" class="file-input" required>
-                <input type="hidden" name="type" value="capacity">
-                <button type="submit" class="btn">Upload</button>
-            </form>
+        <div class="data-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Capacity Data</h2>
+            </div>
+            <div style="padding: 24px 28px;">
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="file" accept=".csv" class="file-input" required>
+                    <input type="hidden" name="type" value="capacity">
+                    <button type="submit" class="btn">Upload Capacity</button>
+                </form>
+            </div>
         </div>
     </div>
 </body>
