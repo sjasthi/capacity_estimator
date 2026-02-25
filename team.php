@@ -34,6 +34,7 @@ while($r = $m->fetch_assoc()) {
         </div>
         <div class="nav-tabs">
             <a href="index.php" class="nav-tab">Dashboard</a>
+            <a href="capacity.php" class="nav-tab">Capacity Entry</a>
             <a href="reports.php" class="nav-tab">Reports</a>
             <a href="import.php" class="nav-tab">Import</a>
         </div>
