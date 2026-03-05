@@ -5,98 +5,103 @@ $teamId = intval($_GET['id']);
 
 $team = $db->query("SELECT t.teamName, a.artId, a.artName FROM teams t JOIN arts a ON t.artId=a.artId WHERE t.teamId=$teamId")->fetch_assoc();
 $iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
-$iterEscaped = $db->real_escape_string($iter);
-$capacity = $db->query("SELECT storyPoints FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE c.teamId=$teamId AND i.iterationName='$iterEscaped'")->fetch_assoc()['storyPoints'] ?? 0;
+$capacity = $db->query("SELECT storyPoints FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE c.teamId=$teamId AND i.iterationName='$iter'")->fetch_assoc()['storyPoints'] ?? 0;
+$members = $db->query("SELECT p.name, p.email, tm.role, tm.allocationPct FROM team_members tm JOIN persons p ON tm.personId=p.personId WHERE tm.teamId=$teamId ORDER BY CASE tm.role WHEN 'Scrum Master' THEN 1 WHEN 'Product Owner' THEN 2 ELSE 3 END");
 
-// Fetch all members into array first to avoid result conflicts
-$membersResult = $db->query("SELECT p.name, p.email, tm.role, tm.allocationPct FROM team_members tm JOIN persons p ON tm.personId=p.personId WHERE tm.teamId=$teamId ORDER BY CASE tm.role WHEN 'Scrum Master' THEN 1 WHEN 'Product Owner' THEN 2 ELSE 3 END");
-$members = [];
-while ($row = $membersResult->fetch_assoc()) {
-    $members[] = $row;
-}
-
-// Calculate from the already-fetched members array
 $calc = 0;
-$memberCount = count($members);
-foreach ($members as $m) {
-    $calc += 3.75 * ($m['allocationPct'] / 100);
+$memberCount = 0;
+$m = $db->query("SELECT allocationPct FROM team_members WHERE teamId=$teamId");
+while($r = $m->fetch_assoc()) {
+    $calc += 3.75 * ($r['allocationPct'] / 100);
+    $memberCount++;
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($team['teamName']) ?></title>
+    <title><?= htmlspecialchars($team['teamName']) ?> - CapacityHub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <h2>📊 Capacity</h2>
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-logo">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            CapacityHub
         </div>
-        <nav>
-            <a href="index.php" class="nav-item">
-                <span>🏠</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="reports.php" class="nav-item">
-                <span>📈</span>
-                <span>Reports</span>
-            </a>
-            <a href="import.php" class="nav-item">
-                <span>📤</span>
-                <span>Import</span>
-            </a>
-        </nav>
+        <div class="nav-tabs">
+            <a href="index.php" class="nav-tab">Dashboard</a>
+            <a href="capacity.php" class="nav-tab">Capacity Entry</a>
+            <a href="reports.php" class="nav-tab">Reports</a>
+            <a href="import.php" class="nav-tab">Import</a>
+        </div>
+        <div class="user-menu">
+            <div class="notification-icon">
+                <i class="far fa-bell"></i>
+            </div>
+            <div class="user-avatar">AD</div>
+        </div>
     </div>
 
-    <div class="main">
-        <div class="header">
-            <div>
-                <a href="art.php?id=<?= $team['artId'] ?>" class="back">← <?= htmlspecialchars($team['artName']) ?></a>
-                <h1><?= htmlspecialchars($team['teamName']) ?></h1>
-            </div>
-            <div class="user">Admin</div>
+    <div class="container">
+        <a href="art.php?id=<?= $team['artId'] ?>" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to <?= htmlspecialchars($team['artName']) ?>
+        </a>
+
+        <div class="page-header">
+            <h1 class="page-title"><?= htmlspecialchars($team['teamName']) ?></h1>
+            <p class="page-subtitle">Team Overview</p>
         </div>
 
-        <div class="cards">
-            <div class="card purple">
-                <div class="card-icon">🔄</div>
-                <div>
-                    <div class="card-label">Iteration</div>
-                    <div class="card-value"><?= htmlspecialchars($iter) ?></div>
+        <div class="metrics-row">
+            <div class="metric-box purple">
+                <div class="metric-header">
+                    <div class="metric-label">CURRENT ITERATION</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= htmlspecialchars($iter) ?></div>
             </div>
-            <div class="card blue">
-                <div class="card-icon">👥</div>
-                <div>
-                    <div class="card-label">Members</div>
-                    <div class="card-value"><?= $memberCount ?></div>
+            <div class="metric-box blue">
+                <div class="metric-header">
+                    <div class="metric-label">TEAM MEMBERS</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= $memberCount ?></div>
             </div>
-            <div class="card green">
-                <div class="card-icon">⚡</div>
-                <div>
-                    <div class="card-label">Capacity</div>
-                    <div class="card-value"><?= number_format($capacity, 0) ?> SP</div>
+            <div class="metric-box green">
+                <div class="metric-header">
+                    <div class="metric-label">CAPACITY</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= number_format($capacity, 0) ?> SP</div>
             </div>
-            <div class="card orange">
-                <div class="card-icon">🎯</div>
-                <div>
-                    <div class="card-label">Calculated</div>
-                    <div class="card-value"><?= number_format($calc, 2) ?> SP</div>
+            <div class="metric-box orange">
+                <div class="metric-header">
+                    <div class="metric-label">CALCULATED</div>
+                    <div class="metric-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
                 </div>
+                <div class="metric-value"><?= number_format($calc, 2) ?> SP</div>
             </div>
         </div>
 
-        <div class="content">
-            <div class="content-header">
-                <h2>Team Members</h2>
-                <input type="text" placeholder="Search..." class="search" id="memberSearch">
+        <div class="data-panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Team Members</h2>
+                <input type="text" class="search-input" placeholder="Search members...">
             </div>
-            <table id="membersTable">
+            <table>
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -106,41 +111,28 @@ foreach ($members as $m) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($members)): ?>
-                    <tr>
-                        <td colspan="4" style="text-align:center; color:#888; padding:24px;">No members found for this team.</td>
-                    </tr>
-                    <?php else: ?>
-                    <?php foreach ($members as $member):
+                    <?php while($member = $members->fetch_assoc()): 
                         $names = explode(' ', $member['name']);
                         $initials = strtoupper(substr($names[0], 0, 1) . (isset($names[1]) ? substr($names[1], 0, 1) : ''));
                         $roleClass = $member['role'] == 'Scrum Master' ? 'sm' : ($member['role'] == 'Product Owner' ? 'po' : 'dev');
                     ?>
                     <tr>
                         <td>
-                            <div class="name">
+                            <div class="team-info">
                                 <div class="avatar"><?= $initials ?></div>
-                                <?= htmlspecialchars($member['name']) ?>
+                                <div class="team-details">
+                                    <h4><?= htmlspecialchars($member['name']) ?></h4>
+                                </div>
                             </div>
                         </td>
                         <td><?= htmlspecialchars($member['email']) ?></td>
-                        <td><span class="role <?= $roleClass ?>"><?= htmlspecialchars($member['role']) ?></span></td>
+                        <td><span class="role-badge <?= $roleClass ?>"><?= htmlspecialchars($member['role']) ?></span></td>
                         <td><?= $member['allocationPct'] ?>%</td>
                     </tr>
-                    <?php endforeach; ?>
-                    <?php endif; ?>
+                    <?php endwhile; ?>
                 </tbody>
             </table>
         </div>
     </div>
-
-    <script>
-        document.getElementById('memberSearch').addEventListener('input', function() {
-            const filter = this.value.toLowerCase();
-            document.querySelectorAll('#membersTable tbody tr').forEach(row => {
-                row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
-            });
-        });
-    </script>
 </body>
 </html>
