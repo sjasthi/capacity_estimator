@@ -1,4 +1,3 @@
-1
 <?php
 require 'db.php';
 $db = db();
