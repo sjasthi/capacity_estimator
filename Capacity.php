@@ -19,7 +19,7 @@ if (isset($_POST['submit_capacity']) && $selectedTeamId && $selectedIterId) {
     for ($i = 0; $i < $memberCount; $i++) {
         $load    = floatval($_POST["load_$i"] ?? 0);
         $timeOff = floatval($_POST["timeoff_$i"] ?? 0);
-        $sp      = ((10 - $timeOff) / 10) * ($load / 100) * 10;
+        $sp      = (8 - $timeOff) * ($load / 100);
         $totalSP += $sp;
     }
 
@@ -106,7 +106,7 @@ $memberCalc = [];
 foreach ($members as $i => $m) {
     $load    = floatval($_POST["load_$i"] ?? $m['allocationPct']);
     $timeOff = floatval($_POST["timeoff_$i"] ?? 0);
-    $sp      = ((10 - $timeOff) / 10) * ($load / 100) * 10;
+    $sp      = (8 - $timeOff) * ($load / 100);
     $memberCalc[] = ['load' => $load, 'timeOff' => $timeOff, 'sp' => $sp];
     $totalSP += $sp;
 }
@@ -328,7 +328,7 @@ foreach ($members as $i => $m) {
 
         <div class="info-bar">
             <i class="fas fa-info-circle"></i>
-            Formula: <strong style="margin:0 4px;">((10 - Time Off Days) / 10) &times; Default Load% &times; 10 SP</strong> &mdash; 8 hours = 1 SP, 10 working days per iteration.
+            Formula: <strong style="margin:0 4px;">(8 - Time Off Days) &times; Default Load%</strong> &mdash; 2 weeks = 8 SP &nbsp;|&nbsp; each day missed = -1 SP &nbsp;|&nbsp; 8 hours = 1 SP.
         </div>
 
         <div class="data-panel" style="margin-bottom: 24px;">
