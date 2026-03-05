@@ -24,11 +24,15 @@ $artCount = $arts->num_rows;
             </div>
             CapacityHub
         </div>
-        <div class="nav-tabs">
-            <a href="index.php" class="nav-tab active">Dashboard</a>
-            <a href="capacity.php" class="nav-tab">Capacity Entry</a>
-            <a href="reports.php" class="nav-tab">Reports</a>
-            <a href="import.php" class="nav-tab">Import</a>
+                        <div class="nav-tabs">
+            <a href="index.php"      class="nav-tab">Dashboard</a>
+            <a href="arts.php"       class="nav-tab">ARTs</a>
+            <a href="teams.php"      class="nav-tab">Teams</a>
+            <a href="iterations.php" class="nav-tab">Iterations</a>
+            <a href="capacity.php"   class="nav-tab">Capacity Entry</a>
+            <a href="reports.php"    class="nav-tab">Reports</a>
+            <a href="import.php"     class="nav-tab">Import</a>
+            <a href="export.php"     class="nav-tab">Export</a>
         </div>
         <div class="user-menu">
             <div class="notification-icon">
