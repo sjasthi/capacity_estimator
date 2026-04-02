@@ -1,19 +1,18 @@
 <?php
 require 'db.php';
 $db = db();
-$artId = intval($_GET['id']);
-
-$art = $db->query("SELECT artName FROM arts WHERE artId=$artId")->fetch_assoc();
-$iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
+$artId    = intval($_GET['id']);
+$art      = $db->query("SELECT artName FROM arts WHERE artId=$artId")->fetch_assoc();
+$iter     = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
 $capacity = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN teams t ON c.teamId=t.teamId JOIN iterations i ON c.iterationId=i.iterationId WHERE t.artId=$artId AND i.iterationName='$iter'")->fetch_assoc()['total'] ?? 0;
-$teams = $db->query("SELECT t.teamId, t.teamName, COUNT(tm.teamMemberId) as members, COALESCE(c.storyPoints, 0) as capacity FROM teams t LEFT JOIN team_members tm ON t.teamId=tm.teamId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId AND i.iterationName='$iter' WHERE t.artId=$artId GROUP BY t.teamId, t.teamName");
+$teams    = $db->query("SELECT t.teamId, t.teamName, COUNT(tm.teamMemberId) as members, COALESCE(c.storyPoints, 0) as capacity FROM teams t LEFT JOIN team_members tm ON t.teamId=tm.teamId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId AND i.iterationName='$iter' WHERE t.artId=$artId GROUP BY t.teamId, t.teamName");
 $teamCount = $teams->num_rows;
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title><?= htmlspecialchars($art['artName']) ?> - CapacityHub</title>
+    <title><?= htmlspecialchars($art['artName'] ?? 'ART') ?> - CapacityHub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -25,7 +24,7 @@ $teamCount = $teams->num_rows;
             </div>
             CapacityHub
         </div>
-                        <div class="nav-tabs">
+                <div class="nav-tabs">
             <a href="index.php"      class="nav-tab">Dashboard</a>
             <a href="arts.php"       class="nav-tab">ARTs</a>
             <a href="teams.php"      class="nav-tab">Teams</a>
@@ -34,6 +33,7 @@ $teamCount = $teams->num_rows;
             <a href="reports.php"    class="nav-tab">Reports</a>
             <a href="import.php"     class="nav-tab">Import</a>
             <a href="export.php"     class="nav-tab">Export</a>
+            <a href="test.php"       class="nav-tab">Test</a>
         </div>
         <div class="user-menu">
             <div class="notification-icon">
@@ -42,9 +42,8 @@ $teamCount = $teams->num_rows;
             <div class="user-avatar">AD</div>
         </div>
     </div>
-
     <div class="container">
-        <a href="index.php" class="back-link">
+<a href="index.php" class="back-link">
             <i class="fas fa-arrow-left"></i>
             Back to Dashboard
         </a>

@@ -1,26 +1,20 @@
 <?php
 require 'db.php';
 $db = db();
-$teamId = intval($_GET['id']);
-
-$team = $db->query("SELECT t.teamName, a.artId, a.artName FROM teams t JOIN arts a ON t.artId=a.artId WHERE t.teamId=$teamId")->fetch_assoc();
-$iter = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
+$teamId   = intval($_GET['id']);
+$team     = $db->query("SELECT t.teamName, a.artId, a.artName FROM teams t JOIN arts a ON t.artId=a.artId WHERE t.teamId=$teamId")->fetch_assoc();
+$iter     = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DESC LIMIT 1")->fetch_assoc()['iterationName'] ?? 'N/A';
 $capacity = $db->query("SELECT storyPoints FROM capacities c JOIN iterations i ON c.iterationId=i.iterationId WHERE c.teamId=$teamId AND i.iterationName='$iter'")->fetch_assoc()['storyPoints'] ?? 0;
-$members = $db->query("SELECT p.name, p.email, tm.role, tm.allocationPct FROM team_members tm JOIN persons p ON tm.personId=p.personId WHERE tm.teamId=$teamId ORDER BY CASE tm.role WHEN 'Scrum Master' THEN 1 WHEN 'Product Owner' THEN 2 ELSE 3 END");
-
-$calc = 0;
-$memberCount = 0;
+$members  = $db->query("SELECT p.name, p.email, tm.role, tm.allocationPct FROM team_members tm JOIN persons p ON tm.personId=p.personId WHERE tm.teamId=$teamId ORDER BY CASE tm.role WHEN 'Scrum Master' THEN 1 WHEN 'Product Owner' THEN 2 ELSE 3 END");
+$calc = 0; $memberCount = 0;
 $m = $db->query("SELECT allocationPct FROM team_members WHERE teamId=$teamId");
-while($r = $m->fetch_assoc()) {
-    $calc += 3.75 * ($r['allocationPct'] / 100);
-    $memberCount++;
-}
+while ($r = $m->fetch_assoc()) { $calc += 8 * ($r['allocationPct'] / 100); $memberCount++; }
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title><?= htmlspecialchars($team['teamName']) ?> - CapacityHub</title>
+    <title><?= htmlspecialchars($team['teamName'] ?? 'Team') ?> - CapacityHub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -32,7 +26,7 @@ while($r = $m->fetch_assoc()) {
             </div>
             CapacityHub
         </div>
-                        <div class="nav-tabs">
+                <div class="nav-tabs">
             <a href="index.php"      class="nav-tab">Dashboard</a>
             <a href="arts.php"       class="nav-tab">ARTs</a>
             <a href="teams.php"      class="nav-tab">Teams</a>
@@ -41,6 +35,7 @@ while($r = $m->fetch_assoc()) {
             <a href="reports.php"    class="nav-tab">Reports</a>
             <a href="import.php"     class="nav-tab">Import</a>
             <a href="export.php"     class="nav-tab">Export</a>
+            <a href="test.php"       class="nav-tab">Test</a>
         </div>
         <div class="user-menu">
             <div class="notification-icon">
@@ -49,9 +44,8 @@ while($r = $m->fetch_assoc()) {
             <div class="user-avatar">AD</div>
         </div>
     </div>
-
     <div class="container">
-        <a href="art.php?id=<?= $team['artId'] ?>" class="back-link">
+<a href="art.php?id=<?= $team['artId'] ?>" class="back-link">
             <i class="fas fa-arrow-left"></i>
             Back to <?= htmlspecialchars($team['artName']) ?>
         </a>
