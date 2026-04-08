@@ -7,6 +7,33 @@ $iter     = $db->query("SELECT iterationName FROM iterations ORDER BY endDate DE
 $capacity = $db->query("SELECT SUM(c.storyPoints) as total FROM capacities c JOIN teams t ON c.teamId=t.teamId JOIN iterations i ON c.iterationId=i.iterationId WHERE t.artId=$artId AND i.iterationName='$iter'")->fetch_assoc()['total'] ?? 0;
 $teams    = $db->query("SELECT t.teamId, t.teamName, COUNT(tm.teamMemberId) as members, COALESCE(c.storyPoints, 0) as capacity FROM teams t LEFT JOIN team_members tm ON t.teamId=tm.teamId LEFT JOIN capacities c ON t.teamId=c.teamId LEFT JOIN iterations i ON c.iterationId=i.iterationId AND i.iterationName='$iter' WHERE t.artId=$artId GROUP BY t.teamId, t.teamName");
 $teamCount = $teams->num_rows;
+
+// --- PROTOTYPE: Inline link tester ---
+$testResults = [];
+$testRan = isset($_GET['test']);
+if ($testRan) {
+    $base = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    $currentPage = basename($_SERVER['SCRIPT_NAME']) . (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] && $_SERVER['QUERY_STRING'] !== 'test' ? '?' . preg_replace('/[&?]?test=?1?/', '', $_SERVER['QUERY_STRING']) : '');
+    // Fetch this page's HTML to extract links
+    $ch = curl_init("$base/$currentPage");
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_FOLLOWLOCATION => true]);
+    $html = curl_exec($ch);
+    curl_close($ch);
+    // Extract all hrefs
+    preg_match_all('/href=["\']((?!#|mailto:|javascript:|http)[^"\']+)["\']/i', $html, $matches);
+    $links = array_unique($matches[1]);
+    foreach ($links as $link) {
+        $link = ltrim($link, '/');
+        if (strpos($link, 'test=') !== false) continue; // skip test links
+        $ch = curl_init("$base/$link");
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_NOBODY => true, CURLOPT_FOLLOWLOCATION => true]);
+        curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $testResults[$link] = $code;
+    }
+}
+// --- END PROTOTYPE ---
 ?>
 <!DOCTYPE html>
 <html>
@@ -33,7 +60,7 @@ $teamCount = $teams->num_rows;
             <a href="reports.php"    class="nav-tab">Reports</a>
             <a href="import.php"     class="nav-tab">Import</a>
             <a href="export.php"     class="nav-tab">Export</a>
-            <a href="test.php"       class="nav-tab">Test</a>
+            <a href="?test=1" class="nav-tab" style="color:#6366f1;font-weight:600;"><i class="fas fa-flask" style="margin-right:4px;"></i>Test</a>
         </div>
         <div class="user-menu">
             <div class="notification-icon">
@@ -43,6 +70,34 @@ $teamCount = $teams->num_rows;
         </div>
     </div>
     <div class="container">
+
+<?php if ($testRan): ?>
+<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <strong style="font-size:15px;">
+            <i class="fas fa-flask" style="color:#6366f1;margin-right:8px;"></i>
+            Link Test Results
+            <?php $pass=count(array_filter($testResults,fn($c)=>$c===200)); $fail=count($testResults)-$pass; ?>
+            <span style="color:#059669;margin-left:10px;">✓ <?= $pass ?> passed</span>
+            <?php if($fail): ?><span style="color:#dc2626;margin-left:8px;">✗ <?= $fail ?> failed</span><?php endif; ?>
+        </strong>
+        <a href="<?= strtok($_SERVER['REQUEST_URI'],'?') ?>" style="font-size:13px;color:#6b7280;text-decoration:none;">✕ Close</a>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <?php foreach($testResults as $link => $code): ?>
+        <tr style="border-top:1px solid #f3f4f6;">
+            <td style="padding:6px 0;font-family:monospace;color:#374151;">
+                <a href="<?= htmlspecialchars($link) ?>" target="_blank" style="color:#6366f1;text-decoration:none;"><?= htmlspecialchars($link) ?></a>
+            </td>
+            <td style="padding:6px 0;text-align:right;font-weight:700;color:<?= $code===200?'#059669':'#dc2626' ?>;">
+                <?= $code===200 ? '✓ OK' : "✗ $code" ?>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
 <a href="index.php" class="back-link">
             <i class="fas fa-arrow-left"></i>
             Back to Dashboard

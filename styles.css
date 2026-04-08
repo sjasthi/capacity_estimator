@@ -356,11 +356,6 @@ tbody tr:hover {
     color: #065f46;
 }
 
-.role-badge.rte {
-    background: #fce7f3;
-    color: #9d174d;
-}
-
 .file-input {
     display: block;
     padding: 10px;
