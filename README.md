@@ -1,81 +1,59 @@
 # Capacity Estimator
-
-A web application for estimating and managing team capacity within the Scaled Agile Framework. This tool helps Agile Release Trains (ARTs) plan iterations by tracking team availability, calculating capacity, and generating reports.
-
+ 
+A web application for estimating and managing team capacity within the Scaled Agile Framework. Use it to plan iterations, track team availability, and generate capacity reports for Program Increment (PI) planning sessions.
+ 
 ---
-
-## Features
-
-- **Iteration Planning** - Define and manage iterations across teams
-- **Team Management** - Add and configure teams participating in the ART
-- **Capacity Estimation** - Calculate available capacity per team per iteration
-- **Import/Export** - Load team data in bulk and export results
-- **Reports** - Generate capacity reports for planning sessions
-- **Clean UI** - Simple interface with a shared header and footer layout
-
+ 
+## What It Does
+ 
+- **Plan iterations:** Define and manage iterations across your Agile Release Train (ART)
+- **Manage teams:** Add and configure all teams participating in the ART
+- **Estimate capacity:** Calculate available capacity per team per iteration based on member availability
+- **Import & export:** Load team data in bulk and export results for use in planning sessions
+- **Generate reports:** Produce capacity reports ready for PI planning
 ---
-
-## Tech Stack
-
-- **Backend:** PHP
-- **Database:** MySQL (schema in `Cap_scheme.sql`)
-- **Frontend:** HTML, CSS (`styles.css`)
-
----
-
+ 
 ## Getting Started
-
-### Prerequisites
-
-- PHP
-- MySQL
-- Web server (e.g., Apache, Nginx, PHP built in server)
-
-### Installation
-
-1. **Clone the repository**
-2. **Set up the database**
-3. **Configure the database connection**
-4. **Run the app**
-   - **Using Apache/Nginx:** Point your virtual host document root to the project folder
-5. Open your browser and navigate to `https://localhost/filename`
-
+ 
+### What You'll Need
+ 
+- A web browser
+- Access to the app URL provided by your administrator (e.g. `https://your-server/capacity-estimator`)
+ 
 ---
-
-## Project Structure
-
-```
-├── index.php              # App entry point
-├── Cap_scheme.sql         # MySQL database schema
-├── db.php                 # Database connection
-├── Header.php             # Shared page header
-├── Footer.html            # Shared page footer
-├── Teams.php              # Team management
-├── team.php               # Individual team view/edit
-├── Iterations.php         # Iteration management
-├── Capacity.php           # Capacity calculation logic
-├── reports.php            # Reporting view
-├── Export.php             # Data export functionality
-├── import.php             # Data import functionality
-├── art.php                # ART level view
-├── arts.php               # ART listing
-├── Test.php               # Testing utilities
-├── styles.css             # Application styles
-└── requirements_loud_thinking.txt  # Project requirements / notes
-```
-
+ 
+## How to Use It
+ 
+### 1. Set Up Your Teams
+ 
+Go to the **Teams** page and add each team participating in your ART. For each team, enter the team name and any relevant configuration.
+ 
+### 2. Define Your Iterations
+ 
+Navigate to **Iterations** and create the iterations for your upcoming Program Increment. Give each one a name and date range.
+ 
+### 3. Enter Member Availability
+ 
+For each team and iteration, enter how many days each team member will be available. This accounts for holidays, time off, and part time commitments.
+ 
+### 4. Review Capacity Estimates
+ 
+Head to the **Capacity** page to see calculated capacity per team per iteration. Adjust availability figures as needed until the numbers reflect reality.
+ 
+### 5. Export for PI Planning
+ 
+Use **Export** to download your capacity data. Bring it into your PI planning session to inform iteration goals and story point targets.
+ 
 ---
-
-## Usage
-
-1. **Set up your teams** via the Teams page
-2. **Define iterations** for your Program Increment (PI)
-3. **Enter availability** for each team member per iteration
-4. **View capacity estimates** and adjust as needed
-5. **Export reports** for use in PI planning sessions
-
+ 
+## Importing Team Data
+ 
+If you have team data in a compatible format, use the **Import** page to load it in bulk rather than entering teams one by one. Contact your administrator for the expected file format.
+ 
 ---
-
-## License
-
-This project is licensed under the terms in the [LICENSE](LICENSE) file.
+ 
+## Tips
+ 
+- Set up teams and iterations before entering availability.
+- Revisit capacity estimates as the PI progresses and team availability changes.
+- Use the **Reports** page for a printable summary to share with stakeholders.
