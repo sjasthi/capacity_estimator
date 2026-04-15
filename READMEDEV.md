@@ -1,4 +1,4 @@
-# Capacity Estimator — Developer Guide
+# Capacity Estimator
  
 A PHP/MySQL web application for ART capacity planning within the Scaled Agile Framework. This document covers architecture, local setup, and contribution guidelines.
  
@@ -91,10 +91,10 @@ A PHP/MySQL web application for ART capacity planning within the Scaled Agile Fr
  
 ### Request Flow
  
-All requests enter through `index.php`. Individual pages (e.g. `Teams.php`, `Capacity.php`) handle their own logic and rendering. There is no MVC framework — each page file is self-contained, querying the database via `db.php` and rendering HTML directly.
+All requests enter through `index.php`. Individual pages (e.g. `Teams.php`, `Capacity.php`) handle their own logic and rendering. There is no MVC framework each page file is self-contained, querying the database via `db.php` and rendering HTML directly.
  
 ### Shared Layout
- 
+
 `Header.php` and `Footer.html` are included on each page to provide consistent navigation and page structure.
  
 ### Capacity Logic
