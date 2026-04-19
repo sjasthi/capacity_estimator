@@ -2,6 +2,67 @@
 require 'db.php';
 $db = db();
 
+// === Inline Link Tester ===
+$testRan = false;
+$testResults = [];
+$pass = 0;
+$fail = 0;
+$closeUrl = '';
+$testLink = '';
+
+$testParams = $_GET;
+$testParams['test'] = '1';
+$testLink = basename($_SERVER['PHP_SELF']) . '?' . http_build_query($testParams);
+
+if (isset($_GET['test']) && $_GET['test'] == '1') {
+    $testRan = true;
+    $closeParams = $_GET;
+    unset($closeParams['test']);
+    $closeUrl = basename($_SERVER['PHP_SELF']);
+    if (!empty($closeParams)) {
+        $closeUrl .= '?' . http_build_query($closeParams);
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'];
+    $path = dirname($_SERVER['PHP_SELF']) . '/' . basename($_SERVER['PHP_SELF']);
+    $fetchParams = $_GET;
+    unset($fetchParams['test']);
+    $fetchUrl = $scheme . '://' . $host . $path;
+    if (!empty($fetchParams)) {
+        $fetchUrl .= '?' . http_build_query($fetchParams);
+    }
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $fetchUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $html = curl_exec($ch);
+    curl_close($ch);
+    $links = [];
+    if (preg_match_all('/<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>/i', $html, $matches)) {
+        $links = array_unique($matches[1]);
+    }
+    $baseUrl = $scheme . '://' . $host . dirname($_SERVER['PHP_SELF']) . '/';
+    foreach ($links as $link) {
+        if (preg_match('/^(https?:\/\/|#|mailto:|javascript:|tel:)/i', $link)) continue;
+        if (strpos($link, 'test=') !== false) continue;
+        if (empty(trim($link))) continue;
+        $checkUrl = $baseUrl . $link;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $checkUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $ok = ($httpCode >= 200 && $httpCode < 400);
+        if ($ok) { $pass++; } else { $fail++; }
+        $testResults[] = array('link' => $link, 'code' => $httpCode, 'ok' => $ok);
+    }
+}
+// === End Inline Link Tester ===
+
 $message = '';
 $messageType = '';
 
@@ -65,33 +126,6 @@ $arts    = $db->query("
     GROUP BY a.artId, a.artName
     ORDER BY a.artName
 ");
-
-// --- PROTOTYPE: Inline link tester ---
-$testResults = [];
-$testRan = isset($_GET['test']);
-if ($testRan) {
-    $base = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-    $currentPage = basename($_SERVER['SCRIPT_NAME']) . (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] && $_SERVER['QUERY_STRING'] !== 'test' ? '?' . preg_replace('/[&?]?test=?1?/', '', $_SERVER['QUERY_STRING']) : '');
-    // Fetch this page's HTML to extract links
-    $ch = curl_init("$base/$currentPage");
-    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_FOLLOWLOCATION => true]);
-    $html = curl_exec($ch);
-    curl_close($ch);
-    // Extract all hrefs
-    preg_match_all('/href=["\']((?!#|mailto:|javascript:|http)[^"\']+)["\']/i', $html, $matches);
-    $links = array_unique($matches[1]);
-    foreach ($links as $link) {
-        $link = ltrim($link, '/');
-        if (strpos($link, 'test=') !== false) continue; // skip test links
-        $ch = curl_init("$base/$link");
-        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_NOBODY => true, CURLOPT_FOLLOWLOCATION => true]);
-        curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        $testResults[$link] = $code;
-    }
-}
-// --- END PROTOTYPE ---
 ?>
 <!DOCTYPE html>
 <html>
@@ -102,18 +136,7 @@ if ($testRan) {
     <link rel="stylesheet" href="styles.css">
     <style>
         .inline-form { display: inline; }
-        .btn-sm {
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
+        .btn-sm { padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
         .btn-edit { background: #eff6ff; color: #1e40af; }
         .btn-edit:hover { background: #dbeafe; }
         .btn-danger { background: #fef2f2; color: #991b1b; }
@@ -122,51 +145,28 @@ if ($testRan) {
         .btn-save:hover { background: #5558e3; }
         .btn-cancel { background: #f3f4f6; color: #374151; }
         .btn-cancel:hover { background: #e5e7eb; }
-        .inline-edit-input {
-            padding: 7px 12px;
-            border: 1px solid #6366f1;
-            border-radius: 6px;
-            font-size: 14px;
-            color: #111827;
-            outline: none;
-            width: 260px;
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
-        }
-        .add-panel {
-            background: #f9fafb;
-            border-top: 1px solid #e5e7eb;
-            padding: 20px 28px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .add-panel input[type="text"] {
-            padding: 10px 14px;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            color: #111827;
-            outline: none;
-            width: 300px;
-        }
-        .add-panel input[type="text"]:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
-        }
-        .error-message {
-            padding: 12px;
-            background: #fee2e2;
-            color: #991b1b;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .stat-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 13px;
-            color: #6b7280;
-        }
+        .inline-edit-input { padding: 7px 12px; border: 1px solid #6366f1; border-radius: 6px; font-size: 14px; color: #111827; outline: none; width: 260px; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .add-panel { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 28px; display: flex; align-items: center; gap: 12px; }
+        .add-panel input[type="text"] { padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #111827; outline: none; width: 300px; }
+        .add-panel input[type="text"]:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .error-message { padding: 12px; background: #fee2e2; color: #991b1b; border-radius: 8px; margin-bottom: 20px; }
+        .stat-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #6b7280; }
+        .test-panel { background: #fefce8; border: 2px solid #facc15; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; }
+        .test-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .test-panel-title { font-size: 16px; font-weight: 700; color: #854d0e; display: flex; align-items: center; gap: 8px; }
+        .test-panel-close { background: #fef3c7; color: #92400e; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .test-panel-close:hover { background: #fde68a; }
+        .test-summary { display: flex; gap: 16px; margin-bottom: 16px; }
+        .test-stat { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+        .test-stat.pass { background: #dcfce7; color: #166534; }
+        .test-stat.fail { background: #fee2e2; color: #991b1b; }
+        .test-results { max-height: 300px; overflow-y: auto; background: white; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .test-result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+        .test-result-row:last-child { border-bottom: none; }
+        .test-result-link { color: #374151; font-family: monospace; word-break: break-all; }
+        .test-result-status { padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px; white-space: nowrap; }
+        .test-result-status.ok { background: #dcfce7; color: #166534; }
+        .test-result-status.error { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -175,16 +175,16 @@ if ($testRan) {
             <div class="brand-logo"><i class="fas fa-chart-line"></i></div>
             CapacityHub
         </div>
-                                <div class="nav-tabs">
-            <a href="index.php"      class="nav-tab">Dashboard</a>
-            <a href="arts.php"       class="nav-tab">ARTs</a>
-            <a href="teams.php"      class="nav-tab">Teams</a>
+        <div class="nav-tabs">
+            <a href="index.php" class="nav-tab">Dashboard</a>
+            <a href="arts.php" class="nav-tab">ARTs</a>
+            <a href="teams.php" class="nav-tab">Teams</a>
             <a href="iterations.php" class="nav-tab">Iterations</a>
-            <a href="capacity.php"   class="nav-tab">Capacity Entry</a>
-            <a href="reports.php"    class="nav-tab">Reports</a>
-            <a href="import.php"     class="nav-tab">Import</a>
-            <a href="export.php"     class="nav-tab">Export</a>
-            <a href="?test=1" class="nav-tab" style="color:#6366f1;font-weight:600;"><i class="fas fa-flask" style="margin-right:4px;"></i>Test</a>
+            <a href="capacity.php" class="nav-tab">Capacity Entry</a>
+            <a href="reports.php" class="nav-tab">Reports</a>
+            <a href="import.php" class="nav-tab">Import</a>
+            <a href="export.php" class="nav-tab">Export</a>
+            <a href="<?= htmlspecialchars($testLink) ?>" class="nav-tab" style="color: #8b5cf6;"><i class="fas fa-flask"></i> Test</a>
         </div>
         <div class="user-menu">
             <div class="notification-icon"><i class="far fa-bell"></i></div>
@@ -194,32 +194,29 @@ if ($testRan) {
 
     <div class="container">
 
-<?php if ($testRan): ?>
-<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <strong style="font-size:15px;">
-            <i class="fas fa-flask" style="color:#6366f1;margin-right:8px;"></i>
-            Link Test Results
-            <?php $pass=count(array_filter($testResults,fn($c)=>$c===200)); $fail=count($testResults)-$pass; ?>
-            <span style="color:#059669;margin-left:10px;">✓ <?= $pass ?> passed</span>
-            <?php if($fail): ?><span style="color:#dc2626;margin-left:8px;">✗ <?= $fail ?> failed</span><?php endif; ?>
-        </strong>
-        <a href="<?= strtok($_SERVER['REQUEST_URI'],'?') ?>" style="font-size:13px;color:#6b7280;text-decoration:none;">✕ Close</a>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <?php foreach($testResults as $link => $code): ?>
-        <tr style="border-top:1px solid #f3f4f6;">
-            <td style="padding:6px 0;font-family:monospace;color:#374151;">
-                <a href="<?= htmlspecialchars($link) ?>" target="_blank" style="color:#6366f1;text-decoration:none;"><?= htmlspecialchars($link) ?></a>
-            </td>
-            <td style="padding:6px 0;text-align:right;font-weight:700;color:<?= $code===200?'#059669':'#dc2626' ?>;">
-                <?= $code===200 ? '✓ OK' : "✗ $code" ?>
-            </td>
-        </tr>
-        <?php endforeach; ?>
-    </table>
-</div>
-<?php endif; ?>
+        <?php if ($testRan): ?>
+        <div class="test-panel">
+            <div class="test-panel-header">
+                <div class="test-panel-title"><i class="fas fa-flask"></i> Link Test Results</div>
+                <a href="<?= htmlspecialchars($closeUrl) ?>" class="test-panel-close"><i class="fas fa-times"></i> Close</a>
+            </div>
+            <div class="test-summary">
+                <div class="test-stat pass"><i class="fas fa-check-circle"></i> <?= $pass ?> Passed</div>
+                <div class="test-stat fail"><i class="fas fa-times-circle"></i> <?= $fail ?> Failed</div>
+            </div>
+            <div class="test-results">
+                <?php foreach ($testResults as $result): ?>
+                <div class="test-result-row">
+                    <span class="test-result-link"><?= htmlspecialchars($result['link']) ?></span>
+                    <span class="test-result-status <?= $result['ok'] ? 'ok' : 'error' ?>"><?= $result['ok'] ? '✓ ' . $result['code'] : '✗ ' . $result['code'] ?></span>
+                </div>
+                <?php endforeach; ?>
+                <?php if (empty($testResults)): ?>
+                <div class="test-result-row"><span style="color: #6b7280;">No internal links found to test.</span></div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="page-header">
             <h1 class="page-title">Agile Release Trains</h1>
@@ -273,17 +270,11 @@ if ($testRan) {
                         <td><span class="stat-badge"><i class="fas fa-user"></i> <?= $art['memberCount'] ?> members</span></td>
                         <td>
                             <div style="display:flex;gap:8px;">
-                                <a href="art.php?id=<?= $art['artId'] ?>" class="btn-sm btn-edit">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                                <a href="arts.php?edit=<?= $art['artId'] ?>" class="btn-sm btn-edit">
-                                    <i class="fas fa-pencil-alt"></i> Edit
-                                </a>
+                                <a href="art.php?id=<?= $art['artId'] ?>" class="btn-sm btn-edit"><i class="fas fa-eye"></i> View</a>
+                                <a href="arts.php?edit=<?= $art['artId'] ?>" class="btn-sm btn-edit"><i class="fas fa-pencil-alt"></i> Edit</a>
                                 <form method="POST" class="inline-form" onsubmit="return confirm('Delete this ART? This may fail if it has associated data.')">
                                     <input type="hidden" name="artId" value="<?= $art['artId'] ?>">
-                                    <button type="submit" name="delete_art" class="btn-sm btn-danger">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
+                                    <button type="submit" name="delete_art" class="btn-sm btn-danger"><i class="fas fa-trash"></i> Delete</button>
                                 </form>
                             </div>
                         </td>
@@ -293,14 +284,11 @@ if ($testRan) {
                 </tbody>
             </table>
 
-            <!-- Add new ART row -->
             <form method="POST">
                 <div class="add-panel">
                     <i class="fas fa-plus-circle" style="color:#6366f1;font-size:18px;"></i>
                     <input type="text" name="artName" placeholder="New ART name..." required>
-                    <button type="submit" name="add_art" class="btn">
-                        <i class="fas fa-plus" style="margin-right:6px;"></i>Add ART
-                    </button>
+                    <button type="submit" name="add_art" class="btn"><i class="fas fa-plus" style="margin-right:6px;"></i>Add ART</button>
                 </div>
             </form>
         </div>
